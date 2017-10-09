@@ -1,0 +1,83 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+numeric_data <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+head(numeric_data)
+
+```
+
+
+
+```{r}
+y <- data.frame(Claim_Amount=numeric_data[,"Claim_Amount"])
+```
+
+
+```{r}
+folds <- sample(1:5,nrow(numeric_data),replace = T)
+nfolds <- length(unique(folds))
+length(folds)
+unique(folds)
+```
+
+
+
+
+
+
+```{r}
+
+#i=1
+library(caret)
+datafiles=c("raw_numerical","svd","tsne_vars","vars_num_cor","vars1_16_PCA","Yeo_trn_vars")
+prediction_folds=array(0, c(nrow(numeric_data), length(datafiles)))
+prediction_full=array(0, c(nrow(numeric_data), length(datafiles)))
+for(i in 1:length(datafiles)){
+  print(paste0("Processing on ",datafiles[i]))
+  data1 <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[i],".csv"))
+  if(!("Claim_Amount" %in% colnames(data1))==T)
+{
+  data1 <- cbind(data1,Claim_Amount=y)
+  }
+
+  
+  # loop over folds 
+  for (jj in 1:nfolds)
+  {
+    isTrain <- which(folds != jj)
+    isValid <- which(folds == jj)
+    
+  Traindata<-data1[isTrain,]
+  Testdata<-data1[isValid,]
+  library(extraTrees)
+  et1 <- extraTrees(Traindata[,-ncol(Traindata)],Traindata$Claim_Amount,numRandomCuts = 5)
+  #nodesize-the size of leaves of the tree (default is 5 for regression and 1 for classification)
+  #numRandomCuts-the number of random cuts for each (randomly chosen) feature (default 1, which corresponds to the official ExtraTrees method). The higher the number of cuts the higher the chance of a good cut.
+  pred <- predict(et1,Testdata[,-ncol(Testdata)])
+  
+  prediction_folds[isValid,i] <- pred
+  
+  
+  }
+  
+  
+  library(randomForest)
+   et2 <- extraTrees(data1[,-ncol(data1)],data1$Claim_Amount,numRandomCuts = 10)
+  pred_full <- predict(et2,data1[,-ncol(data1)])
+  
+  prediction_full[,i] <- pred_full
+   
+                           
+
+}
+
+
+
+```
+
+
+

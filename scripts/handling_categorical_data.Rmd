@@ -1,0 +1,175 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Preprocessing steps:
+loading categorical data.
+rename the factor levels for Cat12.
+created rowSums of missing values for cat1 to cat12.
+checking the % of missing values in the data.
+impute the missing values with mode imputation.
+split the columns Blind_Model and Blind_subModel to get Vehicle details.
+creaed dummy variables for cat1 to cat12.
+find linear combos and remove it.
+categorical encoding.
+saving the file.
+
+
+
+
+
+Reading the categorical data
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+vars_categ <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_categorical.csv")) #Reading the data
+names(vars_categ)   #column names of the categorical data
+```
+
+
+```{r}
+str(vars_categ)
+
+```
+
+rename the factor levels for Cat12 ->space with ?
+```{r}
+#vars_categ[vars_categ=="?"] 
+table(vars_categ$Cat12)
+levels(vars_categ$Cat12)
+levels(vars_categ$Cat12)[levels(vars_categ$Cat12)==""] <- "?"
+levels(vars_categ$Cat12)
+table(vars_categ$Cat12)
+```
+  
+  
+Adding the missing values in row-wise for columns Cat 1 to 12 and made a new column with cat1_12_NAcount
+
+```{r}
+
+Cat1_12_NAcount <- data.frame(Cat1_12_NAcount=apply(vars_categ[,4:15],1,function(x) sum(x=='?')))
+vars_categ <- cbind(vars_categ,Cat1_12_NAcount=Cat1_12_NAcount)
+
+table(vars_categ$Cat1_12_NAcount)
+
+```
+
+
+again Adding the missing values in row-wise for columns Blind_Make,Blind_Model,Blind_Submodel.
+
+```{r}
+Blind1_3_NAcount <- data.frame(Blind1_3_NAcount=apply(vars_categ[,1:3],1,function(x) sum(x=='?')))
+vars_categ <- cbind(vars_categ,Blind1_3_NAcount=Blind1_3_NAcount)
+
+table(vars_categ$Blind1_3_NAcount)
+```
+
+
+
+
+% of missing values.
+```{r}
+
+source(paste0(Path,"/scripts/utilities/missvalpercent.R"))  #reading missing values percentages
+
+missValpercent(vars_categ,"?")
+
+```
+
+Blind_Make ,Blind_Model ,Blind_Submodel has equal missing percentage.
+Cat2 = 36%
+Cat4 = 42%
+Cat5 = 42%
+Cat7 = 54%
+and remaining has low missing values.
+
+
+
+Imputing the missing categorical data 
+```{r}
+
+vars_categ[vars_categ=="?"] <- NA
+apply(vars_categ,2,function(x) sum(is.na(x)))
+
+sum(is.na(vars_categ))
+
+
+
+source(paste0(Path,"/scripts/utilities/numeric(mean)-categorical(mode)Imputation.R"))  #reading plots function
+vars_categ_imp <- Imputation(vars_categ)
+
+
+#library(missForest)
+#vars_categ_imp <- missForest(vars_categ[,c(4:16)], maxiter = 10, ntree = 100,verbose = TRUE,mtry = floor(sqrt(ncol(vars_categ[,c(4:16)]))))
+
+
+sum(is.na(vars_categ_imp))
+```
+
+
+split the column Blind_Model into 2 parts
+```{r}
+
+ Blind_Model_split<- strsplit(as.character(vars_categ$Blind_Model),'.',fixed = T)
+ Blind_Model_split<- do.call(rbind, Blind_Model_split)
+ head(Blind_Model_split)
+
+```
+
+
+split the column Blind_Submodel into 3 parts
+```{r}
+ Blind_Submodel_split<- strsplit(as.character(vars_categ$Blind_Submodel),'.',fixed = T)
+ Blind_Submodel_split<- do.call(rbind, Blind_Submodel_split)
+ head(Blind_Submodel_split)
+```
+
+converting into dataframe and changing column names
+```{r}
+Blind_Submodel_split <- data.frame(Blind_Submodel_split)
+names(Blind_Submodel_split) <- c('Vehicle_make','Vehicle_model','Vehicle_submodel')
+head(Blind_Submodel_split)
+```
+
+
+```{r}
+write.csv(Blind_Submodel_split,paste0(Path,'/data_for_models/vehical_details.csv'),row.names = F)
+write.csv(vars_categ_imp,paste0(Path,'/data_for_models/vars_categ_imp.csv'),row.names = F)
+```
+
+
+#creating dummy for cat1 to cat12
+
+```{r}
+library(dummies)
+vars_categ_dummy <- dummy.data.frame(vars_categ[,c(4:15)], sep = ".")
+
+```
+
+```{r}
+write.csv(vars_categ_dummy,paste0(Path,'/data_for_models/vars_categ_dummy.csv'),row.names = F)
+```
+
+can be removed to eliminate the linear dependencies:
+```{r}
+library(caret)
+Linear_comb <- findLinearCombos(vars_categ_dummy)
+Linear_comb
+```
+
+
+```{r}
+write.csv(vars_categ_dummy[,-Linear_comb$remove],paste0(Path,'/data_for_models/vars_categ_dummy_witoutlineardep.csv'),row.names = F)
+```
+
+categorical encoding 
+```{r}
+source(paste0(Path,"/scripts/utilities/Data_encoding.R"))
+cat <- Data_encoding(vars_categ_imp[,4:15])
+```
+
+```{r}
+write.csv(cat,paste0(Path,'/data_for_models/categ_encoding.csv'),row.names = F)
+```

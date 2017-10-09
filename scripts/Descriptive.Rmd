@@ -1,0 +1,210 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Steps Performed:
+
+Understanding the data.
+Finding missing values.
+
+Separate categorical and numerical.
+univariate analysis.
+checking the distribution of each variable in numerical data.
+checking the correlation for numerical data.
+checking the frequency for categorical data.
+
+
+
+
+
+Data contains 34 variables.
+
+Household_ID ->	Unique identifier for each household.
+Vehicle	-> Unique identifier for each vehicle within a household.
+Calendar_Year ->	Calendar year during which vehicle was insured ,years:2005,2006,2007.
+Model_Year ->	Model year of vehicle ,29levels->1981 to 2009
+Blind_Make ->	Vehicle make(example: ACME, coded A)
+Blind_Model ->	Vehicle model(example: ACME Roadster, coded A.1)
+Blind_Submodel ->	Vehicle submodel (example: ACME Roadster LS, coded A.1.1) e.g. no suffix after the model name--submodel is coded as 0.
+
+Categorical vehicle variable -> cat1 to cat12
+Ordered categorical vehicle variable -> OrdCat 
+Continuous vehicle variable, mean 0 stdev 1 -> Var1 to Var7
+Categorical non-vehicle variable -> NVCat
+Continuous non-vehicle variable, mean 0 stdev 1	-> NVVar1 to NVVar4
+
+
+
+Target:Claim_Amount
+The goal of this competition is to predict Bodily Injury Liability Insurance claim payments based on the characteristics of the insured’s vehicle.   
+
+So it is a Regression Problem.
+
+
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+setwd(Path) #setting working directory
+getwd()
+
+data <- read.csv("data/train_1L.csv") #Reading the data
+attach(data)     #attach the dataset ,we can call the variables directly without dataframe name.
+names(data)   #column names of the data
+```
+
+```{r}
+str(data) #structure of the data
+```
+checking the datatypes
+
+```{r}
+summary(data)
+```
+
+
+
+missing values(?)
+
+Cat2 has 36897
+Cat3 has 24
+Cat4 has 42780
+Cat5 has 42820
+Cat6 has 213
+Cat7 has 54386
+Cat8 has 24
+Cat10 has 26
+Cat11 has 264
+Cat12(blank) 241
+
+
+
+
+
+Target variable:
+
+```{r}
+#Claim_Amount
+#table(Claim_Amount)   #Claim_Amount frequency
+prop.table(table(Claim_Amount)) #Claim_Amount frequency percentage.
+```
+
+99286 rows has 0's. which contains 99% data.
+
+
+
+distribution of target variable
+```{r}
+# Density and rug  
+d <- density(Claim_Amount)
+plot(d, type="n", main="Claim_Amount")
+polygon(d, col="lightgray", border="gray")
+rug(Claim_Amount, col="red")
+```
+
+high concentrationof data is at 0.and gets sprased while the claim amount increases.
+
+
+
+#plots
+Distribution of categorical and numerical variables
+```{r}
+source(paste0(Path,"/scripts/utilities/plots_func.R"))  #reading plots function
+
+plotsfunc(data,"G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge\\plots") #plots will save into the path specified
+
+
+```
+
+Model-year=>left skewed.
+var1 ,var2, var3 ,var4 ,var6 ,var7,var8 => right skewed.(long tail)
+
+most the variables has outliers.
+
+
+
+Seperate numerical and Categorical data
+
+```{r}
+factors <- sapply(data, is.factor) #checking the variable is a factor
+vars_categ <- data[, factors]     #taking only factor variables
+names(vars_categ)
+
+vars_numeric <- data[,!factors]   #taking only numerical variables
+names(vars_numeric)
+```
+17-categorical
+18-Numerical
+
+
+
+```{r}
+length(unique(Household_ID)) #unique Household_ID
+length(unique(Row_ID)) #unique Row_ID
+```
+
+Row id is unique.
+but household id is dupicated.
+
+```{r}
+#Removing rowId
+vars_numeric <- vars_numeric[, -which(names(vars_numeric) %in% c("Row_ID"))]
+
+```
+
+
+```{r}
+length(Household_ID[duplicated(Household_ID)]) #duplicated records
+
+```
+
+
+
+```{r}
+source(paste0(Path,"/scripts/utilities/correlation.R"))  #reading correlation
+corFun(vars_numeric)
+```
+
+
+
+
+
+<!-- ```{r} -->
+<!-- #pairs(vars_numeric) -->
+<!-- cor(vars_numeric) -->
+<!-- ``` -->
+
+<!-- high correlated variables(0.74-0.99) -->
+
+<!-- var1 & var3 = 0.743946820 -->
+<!-- var1 & var5 = 0.905651716 -->
+<!-- var1 & var6 = 0.777026876 -->
+<!-- var2 & var4 = 0.982659211 -->
+<!-- var2 & var6 = 0.770531671 -->
+<!-- var3 & var5 = 0.784011528 -->
+<!-- var3 & var6 = 0.825888541 -->
+<!-- var4 & var6 = 0.784532509 -->
+<!-- var5 & var6 = 0.749018242 -->
+<!-- var6 & var7 = 0.80144159 -->
+
+
+
+
+
+
+Saving Raw numeric and categorical data
+```{r}
+
+write.csv(vars_numeric,paste0(Path,'/data_for_models/raw_numerical.csv'),row.names = F)
+write.csv(vars_categ,paste0(Path,'/data_for_models/raw_categorical.csv'),row.names = F)
+          
+```
+
+
+```{r}
+```
+
+
+
+
+

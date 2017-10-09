@@ -1,0 +1,163 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+numeric_data <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+head(numeric_data)
+
+```
+
+```{r}
+y <- data.frame(Claim_Amount=numeric_data[,"Claim_Amount"])
+```
+
+```{r}
+folds <- sample(1:5,nrow(numeric_data),replace = T)
+nfolds <- length(unique(folds))
+length(folds)
+unique(folds)
+```
+
+
+
+
+
+```{r}
+
+#i=1
+k=3
+library(caret)
+datafiles=c("raw_numerical","svd","tsne_vars","vars_num_cor","vars1_16_PCA","Yeo_trn_vars","vars_categ_dummy","box_trn_vars",
+            "categ_encoding")
+algorithm=c("kd_tree", "cover_tree", "brute")
+prediction_folds=array(0, c(nrow(numeric_data), c(length(datafiles)*length(algorithm))))
+prediction_full=array(0, c(nrow(numeric_data), c(length(datafiles)*length(algorithm))))
+
+for(i in 1:length(datafiles)){
+  
+  tryCatch({
+  print(paste0("Processing on ",datafiles[i]))
+  data1 <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[i],".csv"))
+  if(!("Claim_Amount" %in% colnames(data1))==T)
+{
+  data1 <- cbind(data1,Claim_Amount=y)
+  }
+  
+  for(ii in 1:length(algorithm)){
+    print(paste0("ALgorithm  ", algorithm[ii]))
+   
+     # loop over folds 
+  for (jj in 1:nfolds)
+  {
+    print(paste0("Runing fold : ", jj))
+    isTrain <- which(folds != jj)
+    isValid <- which(folds == jj)
+    
+  Traindata<-data1[isTrain,]
+  Testdata<-data1[isValid,]
+  
+  library(FNN)
+ # Fitting model
+  fit_knn <- knn.reg(Traindata,Testdata,Traindata$Claim_Amount, k = 3 ,algorithm = algorithm[ii])
+  pred_fold <- fit_knn$pred
+ 
+  if(i==1){
+    k=ii
+    prediction_folds[isValid,k] <- pred_fold
+  }
+  if(i > 1){
+    k=k+1
+     prediction_folds[isValid,k] <- pred_fold
+  }
+ 
+ 
+  }
+  library(FNN)
+ # Fitting model
+  fit_knn1 <- knn.reg(data1,data1,data1$Claim_Amount, k = 3 ,algorith=algorithm[ii])
+  pred_full <- fit_knn1$pred
+  
+  if(i==1){
+      k=ii
+     prediction_full[,k] <- pred_full
+  }
+  
+  if(i > 1){
+    k=k+1
+     prediction_full[,k] <- pred_full
+  }
+  
+    
+  }
+  
+  
+  }, error=function(e){cat("ERROR :",datafiles[i],conditionMessage(e), "\n")})
+  
+  
+}
+```
+
+
+
+
+only raw_numerical data works fine.
+```{r}
+model_type="knn"
+prediction_folds <- data.frame(prediction_folds)
+prediction_full <- data.frame(prediction_full)
+colnames(prediction_folds) <- colnames(prediction_full) <- paste(model_type, 1:ncol(prediction_full), sep = "")
+
+prediction_folds <- cbind(prediction_folds,y)
+prediction_full <-  cbind(prediction_full,y)
+```
+
+
+```{r}
+write.csv(prediction_folds[,c(1)],paste0(Path,'/preds/prediction_folds_knn.csv'),row.names = F)
+write.csv(prediction_full[,c(1)],paste0(Path,'/preds/prediction_full_knn.csv'),row.names = F)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ```{r} -->
+<!-- library(FNN) -->
+<!-- # Fitting model -->
+<!-- fit_knn <- knn.reg(numeric_data,numeric_data,numeric_data$Claim_Amount, k = 3 ,algorith="brute") -->
+<!-- a <- fit_knn$pred -->
+<!-- summary(fit_knn) -->
+<!-- #Predict Output  -->
+<!-- predicted= predict(fit_knn,numeric_data) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- library(caret) -->
+<!-- trctrl <- trainControl(method = "cv", number = 10) -->
+<!-- set.seed(3333) -->
+<!-- knn_fit <- train(Claim_Amount ~., data = numeric_data, method = "knn", -->
+<!--  trControl=trctrl, -->
+<!--  preProcess = c("center", "scale"),savePredictions=TRUE) -->
+<!-- ``` -->
+

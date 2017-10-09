@@ -1,0 +1,66 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+library(caret)
+library(xgboost)
+library(dplyr)
+library(tidyr)
+
+#lambda and alpha : These are regularization term on weights. Lambda default value assumed is 1 and alpha is 0.
+#nrounds=the number of trees to the model. 
+xgb_grid_1 <- expand.grid(
+  nrounds= c(2400,3000),
+  eta=0.01,
+  lambda = c(0,0.5,1),
+  alpha =c(0,0.5,1)
+)
+
+xgb_trcontrol <- trainControl(
+  method="cv",
+  number = 5,
+  verboseIter = TRUE,
+  returnData=FALSE,
+  returnResamp = "all",
+  allowParallel = TRUE,
+  savePredictions=TRUE
+)
+
+xgb_train_1 <- train(
+  x = as.matrix(numeric_data %>% select(-c(Claim_Amount))),
+  y= numeric_data$Claim_Amount,
+ trControl = xgb_trcontrol,
+ tuneGrid = xgb_grid_1,
+ method="xgbLinear"
+)
+#modelLookup("xgbLinear")
+
+
+# > xgb_train_1$bestTune
+#   nrounds lambda alpha  eta
+# 9    2400      1     1 0.01
+```
+
+
+```{r}
+xgb_predictions <- data.frame(xgb_train_1$pred)
+```
+

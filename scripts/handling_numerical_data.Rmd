@@ -1,0 +1,169 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Preprocessing steps:
+loading numerical data.
+checking the skewness.
+scale and normalized the data.
+boxcox and YeoJohnson transformation.
+substracting the variables which are highly correlated.
+T-SNE
+SVD(singular value decomposition)
+PCA
+
+
+
+
+Reading the numerical data
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+vars_numeric <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+names(vars_numeric)   #column names of the categorical data
+```
+
+
+```{r}
+
+head(vars_numeric)
+
+```
+
+
+```{r}
+library(e1071)
+sapply(vars_numeric[,c(5:16)],skewness)
+
+```
+
+
+```{r}
+ source(paste0(Path,"/scripts/utilities/scale_normalized.R"))  #reading scale_normalized
+ scale_norm_vars_numeric <- scale_normal(vars_numeric[,c(5:16)])
+
+```
+
+
+```{r}
+library(e1071)
+sapply(scale_norm_vars_numeric,skewness)
+
+```
+
+
+
+```{r}
+source(paste0(Path,"/scripts/utilities/boxcoxR.R"))  #reading boxcoxR.R
+Yeo_trn_vars <- boxcox_trans(scale_norm_vars_numeric,0,"YeoJohnson")
+
+```
+
+
+```{r}
+library(e1071)
+sapply(Yeo_trn_vars,skewness)
+```
+
+
+```{r}
+source(paste0(Path,"/scripts/utilities/boxcoxR.R"))  #reading boxcoxR.R
+box_trn_vars <- boxcox_trans(scale_norm_vars_numeric,0,"BoxCox")
+```
+
+
+```{r}
+library(e1071)
+sapply(box_trn_vars,skewness)
+```
+
+
+
+
+substracting the variables which are highly correlated.
+
+```{r}
+
+vars_num_cor <- c()
+vars_num_cor$var_1_3 <- vars_numeric$Var1- vars_numeric$Var3
+vars_num_cor$var_1_5 <- vars_numeric$Var1- vars_numeric$Var5
+vars_num_cor$var_1_6 <- vars_numeric$Var1- vars_numeric$Var6
+vars_num_cor$var_2_4 <- vars_numeric$Var2- vars_numeric$Var4
+vars_num_cor$var_2_6 <- vars_numeric$Var2- vars_numeric$Var6
+vars_num_cor$var_3_5 <- vars_numeric$Var3- vars_numeric$Var5
+vars_num_cor$var_3_6 <- vars_numeric$Var3- vars_numeric$Var6
+vars_num_cor$var_4_6 <- vars_numeric$Var4- vars_numeric$Var6
+vars_num_cor$var_5_6 <- vars_numeric$Var5- vars_numeric$Var6
+vars_num_cor$var_6_7 <- vars_numeric$Var6- vars_numeric$Var7
+
+vars_num_cor <- data.frame(vars_num_cor)
+
+```
+
+
+
+```{r}
+write.csv(Yeo_trn_vars,paste0(Path,'/data_for_models/Yeo_trn_vars.csv'),row.names = F)
+write.csv(vars_num_cor,paste0(Path,'/data_for_models/vars_num_cor.csv'),row.names = F)
+write.csv(box_trn_vars,paste0(Path,'/data_for_models/box_trn_vars.csv'),row.names = F)
+```
+
+T-SNE
+```{r}
+library(Rtsne)
+tsne_vars <- Rtsne(vars_numeric[,c(5:16)], dims = 2, perplexity=30, verbose=TRUE, max_iter = 100,check_duplicates = F)
+
+```
+
+
+```{r}
+write.csv(tsne_vars$Y,paste0(Path,'/data_for_models/tsne_vars.csv'),row.names = F)
+```
+
+
+
+
+SVD
+```{r}
+vars1_16<- vars_numeric[,c(5:16)]
+#perform hierarchical clustering
+#h <- hclust(dist(vars1_16))
+#h$order
+#perform the SVD
+svd1 <- svd(vars1_16)
+names(svd1)
+head(svd1$u)
+#Variance explained by the number of singular vectors
+svd1$d^2/sum(svd1$d^2)
+plot(svd1$d^2/sum(svd1$d^2), pch=19, xlab="Singluar vector", ylab="Variance explained")
+
+```
+
+
+
+```{r}
+write.csv(svd1$u,paste0(Path,'/data_for_models/svd.csv'),row.names = F)
+```
+
+
+
+PCA
+```{r, warning=FALSE}
+source(paste0(Path,"/scripts/utilities/PCA.R"))  #reading PCA function
+vars1_16_PCA <- PCAfun(vars1_16)
+
+```
+
+```{r}
+write.csv(vars1_16_PCA,paste0(Path,'/data_for_models/vars1_16_PCA.csv'),row.names = F)
+```
+
+```{r}
+
+```
+
+
+
+
+

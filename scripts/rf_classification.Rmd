@@ -1,0 +1,156 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+numeric_data <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+head(numeric_data)
+
+```
+
+
+```{r}
+y <- data.frame(Claim_Amount=numeric_data[,"Claim_Amount"])
+
+
+
+```
+
+```{r}
+# folds <- sample(1:5,nrow(numeric_data),replace = T)
+# nfolds <- length(unique(folds))
+# length(folds)
+# unique(folds)
+```
+
+
+
+
+
+```{r}
+
+#i=1
+library(caret)
+datafiles=c("raw_numerical","svd","tsne_vars","vars_num_cor","vars1_16_PCA","Yeo_trn_vars","vars_categ_dummy","box_trn_vars",
+            "categ_encoding")
+
+# co <- combn(length(datafiles),4)
+# com_trans <- data.frame(t(co))
+
+
+
+prediction_folds=array(0, c(nrow(numeric_data), length(datafiles)))
+prediction_full=array(0, c(nrow(numeric_data), length(datafiles)))
+for(i in 1:length(datafiles)){
+ 
+   tryCatch({
+   print(paste0("Processing on ",datafiles[i]))
+  data1 <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[i],".csv"))
+  if(!("Claim_Amount" %in% colnames(data1))==T)
+{
+  data1 <- cbind(data1,Claim_Amount=y)
+  }
+
+  
+  data1$Claim_Amount <- as.factor(ifelse(data1$Claim_Amount > 0,1,0))
+  folds=createFolds(data1$Claim_Amount,  k = 5, list = T, returnTrain = F)
+  nfolds <- length(unique(folds))
+  # loop over folds 
+  for (jj in 1:nfolds)
+  {
+    isTrain <- folds[-jj]
+    isValid <- folds[jj]
+    
+  Traindata<-data1[unlist(isTrain,use.names = F),]
+  Testdata<-data1[unlist(isValid,use.names = F),]
+  library(randomForest)
+  rf1 <- randomForest(Claim_Amount~.,Traindata,do.trace=T,mtry= sqrt(ncol(Traindata)),ntree=1000)
+  pred <- predict(rf1,Testdata[,-ncol(Testdata)])
+  
+  prediction_folds[unlist(isValid,use.names = F),i] <- pred
+  
+  }
+  
+  
+  library(randomForest)
+   rf2 <- randomForest(Claim_Amount~.,data1,mtry= sqrt(ncol(data1)) ,do.trace=T,ntree=1000)
+  pred_full <- predict(rf2,data1[,-ncol(data1)])
+  
+  prediction_full[,i] <- pred_full
+
+  
+ }, error=function(e){cat("ERROR :",datafiles[i],conditionMessage(e), "\n")})
+}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+model_type="rf"
+prediction_folds <- data.frame(ifelse(prediction_folds==1,0,1))
+prediction_full <- data.frame(ifelse(prediction_full==1,0,1))
+colnames(prediction_folds) <- colnames(prediction_full) <- paste(model_type, 1:ncol(prediction_full), sep = "")
+
+prediction_folds <- cbind(prediction_folds,Claim_Amount=data1$Claim_Amount)
+prediction_full <-  cbind(prediction_full,Claim_Amount=data1$Claim_Amount)
+```
+
+
+
+```{r}
+library(caret)
+confusionMatrix(prediction_folds[,1],data1$Claim_Amount)
+```
+
+```{r}
+table(data1$Claim_Amount)
+```
+
+
+
+```{r}
+table(prediction_folds[,1])
+table(prediction_folds[,2])
+table(prediction_folds[,3])
+table(prediction_folds[,4])
+table(prediction_folds[,5])
+table(prediction_folds[,6])
+table(prediction_folds[,7])
+table(prediction_folds[,8])
+table(prediction_folds[,9])
+
+```
+```{r}
+table(prediction_full[,1])
+table(prediction_full[,2])
+table(prediction_full[,3])
+table(prediction_full[,4])
+table(prediction_full[,5])
+table(prediction_full[,6])
+table(prediction_full[,7])
+table(prediction_full[,8])
+table(prediction_full[,9])
+```
+
+
+
+
+
+```{r}
+write.csv(prediction_folds,paste0(Path,'/preds/prediction_folds_rf_classify.csv'),row.names = F)
+write.csv(prediction_full,paste0(Path,'/preds/prediction_full_rf_classify.csv'),row.names = F)
+```
+

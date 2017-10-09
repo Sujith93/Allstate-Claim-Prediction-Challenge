@@ -1,0 +1,119 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+numeric_data <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+head(numeric_data)
+
+```
+
+
+```{r}
+y <- data.frame(Claim_Amount=numeric_data[,"Claim_Amount"])
+
+
+
+```
+
+```{r}
+# folds <- sample(1:5,nrow(numeric_data),replace = T)
+# nfolds <- length(unique(folds))
+# length(folds)
+# unique(folds)
+```
+
+
+
+
+
+```{r}
+
+#i=1
+library(caret)
+datafiles=c("raw_numerical","svd","tsne_vars","vars_num_cor","vars1_16_PCA","Yeo_trn_vars","vars_categ_dummy","box_trn_vars",
+            "categ_encoding","vars_categ_imp")
+
+co <- combn(length(datafiles),4)
+com_trans <- data.frame(t(co))
+
+
+for(i in 1:nrow(com_trans)){
+ 
+   tryCatch({
+     
+  #reading data sheets
+  
+     data1=data.frame()
+     data1=NA
+     for(n in 1:length(com_trans)){
+       print(paste0("Processing on ",datafiles[com_trans[i,n]]))
+       
+       data <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[com_trans[i,n]],".csv"))
+       data1 <- cbind(data,data1)
+       
+       
+     }
+     
+     data1 <- data1[,-ncol(data1)]
+ # data1 <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[i],".csv"))
+  
+  
+  #checking the Claim_Amount is present
+  
+  if(!("Claim_Amount" %in% colnames(data1))==T)
+{
+  data1 <- cbind(data1,Claim_Amount=y)
+  }
+
+  
+    #converting the numerical column into binary
+  data1$Claim_Amount <- factor(ifelse(data1$Claim_Amount > 0,1,0))
+  
+ set.seed(500)   ### how many times u ran the code it makes the samples constant
+ inTrain<-createDataPartition(data1$Claim_Amount,p=0.60,list=F)
+ dataTrain<-data1[inTrain,]
+ datavalid<-data1[-inTrain,]
+  
+  # folds=createFolds(data1$Claim_Amount,  k = 5, list = T, returnTrain = F)
+  # nfolds <- length(unique(folds))
+  # loop over folds 
+  
+  library(randomForest)
+  rf1 <- randomForest(Claim_Amount~.,dataTrain,do.trace=T,mtry= sqrt(ncol(dataTrain)),ntree=1000)
+  pred <- predict(rf1,datavalid[,-ncol(datavalid)])
+  
+
+  
+  
+  library(randomForest)
+   rf2 <- randomForest(Claim_Amount~.,data1,mtry= sqrt(ncol(data1)),do.trace=T,ntree=1000)
+  pred_full <- predict(rf2,data1[,-ncol(data1)])
+  
+  prediction_full[,i] <- pred_full
+
+  
+ }, error=function(e){cat("ERROR :",datafiles[i],conditionMessage(e), "\n")})
+}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+

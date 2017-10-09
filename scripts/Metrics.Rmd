@@ -1,0 +1,23 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Metrics:
+Gini Coefficient is sometimes used in classification problems.
+Gini coefficient can be straigh away derived from the AUC ROC number.
+Gini is nothing but ratio between area between the ROC curve and the diagnol line 
+            &
+the area of the above triangle. Following is the formulae used :
+
+Gini = 2*AUC – 1
+
+Gini above 60% is a good model. 
+Note:Not to be confused with the Gini index or Gini impurity, used when building decision trees.
+
+```{r}
+require(MLmetrics)
+NormalizedGini()
+
+```
+

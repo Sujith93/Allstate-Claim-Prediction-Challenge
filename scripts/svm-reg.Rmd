@@ -1,0 +1,184 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+numeric_data <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+head(numeric_data)
+
+```
+
+
+
+```{r}
+y <- data.frame(Claim_Amount=numeric_data[,"Claim_Amount"])
+```
+
+```{r}
+folds <- sample(1:5,nrow(numeric_data),replace = T)
+nfolds <- length(unique(folds))
+length(folds)
+unique(folds)
+```
+
+
+
+```{r}
+
+#i=1
+library(caret)
+datafiles=c("raw_numerical","svd","tsne_vars","vars_num_cor","vars1_16_PCA","Yeo_trn_vars","vars_categ_dummy")
+prediction_folds=array(0, c(nrow(numeric_data), length(datafiles)))
+prediction_full=array(0, c(nrow(numeric_data), length(datafiles)))
+for(i in 1:length(datafiles)){
+  print(paste0("Processing on ",datafiles[i]))
+  data1 <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[i],".csv"))
+  if(!("Claim_Amount" %in% colnames(data1))==T)
+{
+  data1 <- cbind(data1,Claim_Amount=y)
+  }
+
+  
+  # loop over folds 
+  for (jj in 1:nfolds)
+  {
+    isTrain <- which(folds != jj)
+    isValid <- which(folds == jj)
+    
+  Traindata<-data1[isTrain,]
+  Testdata<-data1[isValid,]
+  
+  
+  library(e1071)
+  svm.model <- svm(Claim_Amount~.,
+                 data=Traindata,
+                 type="nu-regression",
+                 kernel="radial")
+  
+  # library(randomForest)
+  # rf1 <- randomForest(Claim_Amount~.,Traindata)
+  pred <- predict(svm.model,Testdata[,-ncol(Testdata)])
+  
+  prediction_folds[isValid,i] <- pred
+  
+  # predict<- cbind(Testdata,pred)
+  # prediction1 <- cbind(prediction1,predict)
+  }
+  
+  library(e1071)
+  svm.model1 <- svm(Claim_Amount~.,
+                 data=data1,
+                 type="nu-regression",
+                 kernel="radial")
+  # library(randomForest)
+  #  rf2 <- randomForest(Claim_Amount~.,data1,mtry= (ncol(data1)/3) ,do.trace=T)
+  pred_full <- predict(svm.model1,data1[,-ncol(data1)])
+  
+  prediction_full[,i] <- pred_full
+  
+  
+}
+
+```
+
+
+
+
+```{r}
+model_type="svm"
+prediction_folds <- data.frame(prediction_folds)
+prediction_full <- data.frame(prediction_full)
+colnames(prediction_folds) <- colnames(prediction_full) <- paste(model_type, 1:ncol(prediction_full), sep = "")
+
+prediction_folds <- cbind(prediction_folds,y)
+prediction_full <-  cbind(prediction_full,y)
+```
+
+
+
+
+```{r}
+write.csv(prediction_folds,paste0(Path,'/preds/prediction_folds_svm.csv'),row.names = F)
+write.csv(prediction_full,paste0(Path,'/preds/prediction_full_svm.csv'),row.names = F)
+```
+
+
+
+
+
+```{r}
+library(MLmetrics)
+NormalizedGini(prediction_full$svm1,prediction_full$Claim_Amount)
+NormalizedGini(prediction_full$svm2,prediction_full$Claim_Amount)
+NormalizedGini(prediction_full$svm3,prediction_full$Claim_Amount)
+NormalizedGini(prediction_full$svm4,prediction_full$Claim_Amount)
+NormalizedGini(prediction_full$svm5,prediction_full$Claim_Amount)
+NormalizedGini(prediction_full$svm6,prediction_full$Claim_Amount)
+
+```
+
+
+
+
+```{r}
+normalizedGini <- function(aa, pp) {
+    Gini <- function(a, p) {
+        if (length(a) !=  length(p)) stop("Actual and Predicted need to be equal lengths!")
+        temp.df <- data.frame(actual = a, pred = p, range=c(1:length(a)))
+        temp.df <- temp.df[order(-temp.df$pred, temp.df$range),]
+        population.delta <- 1 / length(a)
+        total.losses <- sum(a)
+        null.losses <- rep(population.delta, length(a)) # Hopefully is similar to accumulatedPopulationPercentageSum
+        accum.losses <- temp.df$actual / total.losses # Hopefully is similar to accumulatedLossPercentageSum
+        gini.sum <- cumsum(accum.losses - null.losses) # Not sure if this is having the same effect or not
+        sum(gini.sum) / length(a)
+    }
+    Gini(aa,pp) / Gini(aa,aa)
+}
+
+
+normalizedGini(prediction_full$svm1,prediction_full$Claim_Amount)
+```
+
+
+
+
+
+```{r}
+cor(prediction_full$svm1,prediction_full$Claim_Amount)
+cor(prediction_full$svm2,prediction_full$Claim_Amount)
+cor(prediction_full$svm3,prediction_full$Claim_Amount)
+cor(prediction_full$svm4,prediction_full$Claim_Amount)
+cor(prediction_full$svm5,prediction_full$Claim_Amount)
+cor(prediction_full$svm6,prediction_full$Claim_Amount)
+```
+
+
+
+
+
+```{r}
+MAE(prediction_full$svm1,prediction_full$Claim_Amount)
+RMSE(prediction_full$svm1,prediction_full$Claim_Amount)
+
+```
+
+
+
+
+
+
+
+
+
+```{r}
+
+library(e1071)
+svm.model <- svm(Claim_Amount~.,
+                 data=numeric_data,
+                 type="nu-regression",
+                 kernel="radial"
+)
+```

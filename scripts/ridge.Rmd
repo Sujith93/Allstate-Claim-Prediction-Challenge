@@ -1,0 +1,89 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+Path="G:\\Old_drive\\Projects\\Allstate_Claim_Prediction_Challenge"
+numeric_data <- read.csv(paste0(dirname(getwd()),"/data_for_models/raw_numerical.csv")) #Reading the data
+head(numeric_data)
+
+```
+
+
+```{r}
+y <- data.frame(Claim_Amount=numeric_data[,"Claim_Amount"])
+```
+
+
+```{r}
+folds <- sample(1:5,nrow(numeric_data),replace = T)
+nfolds <- length(unique(folds))
+length(folds)
+unique(folds)
+```
+
+
+
+```{r}
+datafiles=c("raw_numerical","svd","tsne_vars","vars_num_cor","vars1_16_PCA","Yeo_trn_vars","vars_categ_dummy","box_trn_vars",
+            "categ_encoding")
+prediction_folds=array(0, c(nrow(numeric_data), length(datafiles)))
+prediction_full=array(0, c(nrow(numeric_data), length(datafiles)))
+for(i in 1:length(datafiles)){
+   print(paste0("Processing on ",datafiles[i]))
+  data1 <- read.csv(paste0((dirname(getwd())),"/data_for_models/",datafiles[i],".csv"))
+  if(!("Claim_Amount" %in% colnames(data1))==T)
+{
+  data1 <- cbind(data1,Claim_Amount=y)
+  }
+  # loop over folds 
+  for (jj in 1:nfolds)
+  {
+    isTrain <- which(folds != jj)
+    isValid <- which(folds == jj)
+    
+  Traindata<-data1[isTrain,]
+  Testdata<-data1[isValid,]
+ library(ridge)
+  lm1 <- linearRidge(Claim_Amount~.,Traindata,lambda = "automatic" )
+  pred <- predict(lm1,Testdata[,-ncol(Testdata)])
+  
+  prediction_folds[isValid,i] <- pred
+  
+  # predict<- cbind(Testdata,pred)
+  # prediction1 <- cbind(prediction1,predict)
+  }
+  
+  
+   library(ridge)
+   lm2 <- linearRidge(Claim_Amount~.,data1,lambda = "automatic")
+  pred_full <- predict(lm2,data1[,-ncol(data1)])
+  
+  prediction_full[,i] <- pred_full
+  
+
+}
+
+```
+
+
+
+
+```{r}
+model_type="ridge"
+prediction_folds <- data.frame(prediction_folds)
+prediction_full <- data.frame(prediction_full)
+colnames(prediction_folds) <- colnames(prediction_full) <- paste(model_type, 1:ncol(prediction_full), sep = "")
+
+prediction_folds <- cbind(prediction_folds,y)
+prediction_full <-  cbind(prediction_full,y)
+```
+
+
+
+```{r}
+write.csv(prediction_folds,paste0(Path,'/preds/prediction_folds_ridge.csv'),row.names = F)
+write.csv(prediction_full,paste0(Path,'/preds/prediction_full_ridge.csv'),row.names = F)
+```
+
