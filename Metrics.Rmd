@@ -1,0 +1,50 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Metrics:
+Gini Coefficient is sometimes used in classification problems.
+Gini coefficient can be straigh away derived from the AUC ROC number.
+Gini is nothing but ratio between area between the ROC curve and the diagnol line 
+            &
+the area of the above triangle. Following is the formulae used :
+
+Gini = 2*AUC – 1
+
+Gini above 60% is a good model. 
+Note:Not to be confused with the Gini index or Gini impurity, used when building decision trees.
+
+
+
+example:
+#normalizedGini(1:10000, runif(10000)) # Should be close to zero 
+#normalizedGini(1:1000, 1:1000) 
+#normalizedGini(1:1000, 1000:1) 
+
+
+
+```{r}
+normalizedGini <- function(aa, pp) {
+    Gini <- function(a, p) {
+        if (length(a) !=  length(p)) stop("Actual and Predicted need to be equal lengths!")
+        temp.df <- data.frame(actual = a, pred = p, range=c(1:length(a)))
+        temp.df <- temp.df[order(-temp.df$pred, temp.df$range),]
+        population.delta <- 1 / length(a)
+        total.losses <- sum(a)
+        null.losses <- rep(population.delta, length(a)) # Hopefully is similar to accumulatedPopulationPercentageSum
+        accum.losses <- temp.df$actual / total.losses # Hopefully is similar to accumulatedLossPercentageSum
+        gini.sum <- cumsum(accum.losses - null.losses) # Not sure if this is having the same effect or not
+        sum(gini.sum) / length(a)
+    }
+    Gini(aa,pp) / Gini(aa,aa)
+}
+```
+
+
+
+```{r}
+require(MLmetrics)
+NormalizedGini()
+
+```
